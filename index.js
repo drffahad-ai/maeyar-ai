@@ -1,8 +1,15 @@
 const express = require("express");
 const fetch = require("node-fetch");
+const cors = require("cors");
+
 const app = express();
 
+app.use(cors());
 app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.send("MAEYAR AI شغال 🚀");
+});
 
 app.post("/chat", async (req, res) => {
   try {
@@ -12,9 +19,9 @@ app.post("/chat", async (req, res) => {
     let systemPrompt = "";
 
     if (language === "ar") {
-      systemPrompt = "أنت مساعد ذكي تتحدث باللغة العربية فقط وبأسلوب واضح.";
+      systemPrompt = "أنت مساعد ذكي تتحدث بالعربية بشكل واضح ومهذب.";
     } else {
-      systemPrompt = "You are a helpful AI assistant. Respond in English.";
+      systemPrompt = "You are a helpful AI assistant. Reply clearly in English.";
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -34,19 +41,25 @@ app.post("/chat", async (req, res) => {
 
     const data = await response.json();
 
+    if (!data.choices || !data.choices[0]) {
+      return res.status(500).json({
+        reply: "صار خطأ من OpenAI",
+        details: data
+      });
+    }
+
     res.json({
       reply: data.choices[0].message.content
     });
-
   } catch (error) {
-    res.status(500).send("خطأ في السيرفر");
+    res.status(500).json({
+      reply: "خطأ في السيرفر",
+      error: error.message
+    });
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("MAEYAR AI شغال 🚀");
-});
-
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
