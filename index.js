@@ -17,39 +17,26 @@ app.post("/chat", async (req, res) => {
     const language = req.body.language || "ar";
 
     if (!message) {
-      return res.status(400).json({ reply: "ما تم إرسال أي سؤال." });
+      return res.status(400).json({ reply: "No message was sent." });
     }
 
     let systemPrompt = "";
+    let languageInstruction = "";
 
-    if (language === "ar") {
+    if (language === "en") {
       systemPrompt = `
-أنت مساعد ذكي عربي متخصص في عرض المعلومات بشكل مرتب وواضح.
-يجب أن تكون الإجابة بالعربية فقط.
-نسّق الإجابة دائمًا بهذا الأسلوب:
-**عنوان مختصر**
-**التقييم الفوري**
-- نقطة
-- نقطة
+You are a professional AI assistant.
+You must ALWAYS reply in English only.
+Even if the user writes in Arabic, translate the meaning internally and answer in English only.
+Do not use Arabic in the final answer.
+Format every answer clearly like this:
 
-**الخيارات أو التفسير**
-- نقطة
-- نقطة
-
-**النصيحة النهائية**
-- نقطة
-- نقطة
-      `;
-    } else {
-      systemPrompt = `
-You are a helpful AI assistant.
-Always respond in clear English and well-structured sections:
-**Short Title**
+**Title**
 **Immediate Assessment**
 - Point
 - Point
 
-**Options or Explanation**
+**Explanation or Options**
 - Point
 - Point
 
@@ -57,6 +44,29 @@ Always respond in clear English and well-structured sections:
 - Point
 - Point
       `;
+      languageInstruction = "Answer in English only.";
+    } else {
+      systemPrompt = `
+أنت مساعد ذكي محترف.
+يجب أن تكون جميع الردود بالعربية فقط.
+حتى لو كتب المستخدم بالإنجليزية، افهم المعنى ثم أجب بالعربية فقط.
+لا تستخدم الإنجليزية في الرد النهائي.
+نسّق كل إجابة بهذا الشكل:
+
+**عنوان مختصر**
+**التقييم الفوري**
+- نقطة
+- نقطة
+
+**الشرح أو الخيارات**
+- نقطة
+- نقطة
+
+**النصيحة النهائية**
+- نقطة
+- نقطة
+      `;
+      languageInstruction = "أجب بالعربية فقط.";
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -67,9 +77,10 @@ Always respond in clear English and well-structured sections:
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
+        temperature: 0.3,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: message }
+          { role: "user", content: `${languageInstruction}\n\nUser message: ${message}` }
         ]
       })
     });
@@ -79,12 +90,18 @@ Always respond in clear English and well-structured sections:
     if (!response.ok) {
       console.error("OpenAI error:", data);
       return res.status(500).json({
-        reply: "صار خطأ من خدمة الذكاء الاصطناعي. راجع المفتاح أو إعدادات السيرفر."
+        reply: language === "en"
+          ? "There was an AI service error. Please check the server settings."
+          : "صار خطأ من خدمة الذكاء الاصطناعي. راجع إعدادات السيرفر."
       });
     }
 
     res.json({
-      reply: data.choices?.[0]?.message?.content || "ما وصل رد من الذكاء الاصطناعي."
+      reply: data.choices?.[0]?.message?.content || (
+        language === "en"
+          ? "No response was received from the AI."
+          : "ما وصل رد من الذكاء الاصطناعي."
+      )
     });
 
   } catch (error) {
