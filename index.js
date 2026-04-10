@@ -16,12 +16,47 @@ app.post("/chat", async (req, res) => {
     const message = req.body.message;
     const language = req.body.language || "ar";
 
+    if (!message) {
+      return res.status(400).json({ reply: "ما تم إرسال أي سؤال." });
+    }
+
     let systemPrompt = "";
 
     if (language === "ar") {
-      systemPrompt = "أنت مساعد ذكي تتحدث بالعربية بشكل واضح ومهذب.";
+      systemPrompt = `
+أنت مساعد ذكي عربي متخصص في عرض المعلومات بشكل مرتب وواضح.
+يجب أن تكون الإجابة بالعربية فقط.
+نسّق الإجابة دائمًا بهذا الأسلوب:
+**عنوان مختصر**
+**التقييم الفوري**
+- نقطة
+- نقطة
+
+**الخيارات أو التفسير**
+- نقطة
+- نقطة
+
+**النصيحة النهائية**
+- نقطة
+- نقطة
+      `;
     } else {
-      systemPrompt = "You are a helpful AI assistant. Reply clearly in English.";
+      systemPrompt = `
+You are a helpful AI assistant.
+Always respond in clear English and well-structured sections:
+**Short Title**
+**Immediate Assessment**
+- Point
+- Point
+
+**Options or Explanation**
+- Point
+- Point
+
+**Final Advice**
+- Point
+- Point
+      `;
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -41,20 +76,21 @@ app.post("/chat", async (req, res) => {
 
     const data = await response.json();
 
-    if (!data.choices || !data.choices[0]) {
+    if (!response.ok) {
+      console.error("OpenAI error:", data);
       return res.status(500).json({
-        reply: "صار خطأ من OpenAI",
-        details: data
+        reply: "صار خطأ من خدمة الذكاء الاصطناعي. راجع المفتاح أو إعدادات السيرفر."
       });
     }
 
     res.json({
-      reply: data.choices[0].message.content
+      reply: data.choices?.[0]?.message?.content || "ما وصل رد من الذكاء الاصطناعي."
     });
+
   } catch (error) {
+    console.error("Server error:", error);
     res.status(500).json({
-      reply: "خطأ في السيرفر",
-      error: error.message
+      reply: "تعذر الاتصال بالنظام الآن. حاول مرة ثانية بعد قليل."
     });
   }
 });
